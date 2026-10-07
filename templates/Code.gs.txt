@@ -1,0 +1,103 @@
+/**
+ * {{TITLE}}: serves the binder page and keeps the shared collection.
+ * Paste this whole file into Code.gs, and the binder page into an HTML file named "Binder".
+ * Deploy as a Web app (Execute as: Me, Who has access: Anyone).
+ * Open the web app link to use the binder. The "Collection" tab lists every card collected.
+ * Don't edit the Key column.
+ */
+const SHEET_NAME = 'Collection';
+const HEADERS = ['Key', 'Card', 'Set', 'Number', 'Finish', 'Collected on'];
+
+function sheet_() {
+  const ss = SpreadsheetApp.getActive();
+  let sh = ss.getSheetByName(SHEET_NAME);
+  if (!sh) {
+    sh = ss.insertSheet(SHEET_NAME);
+    sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+    sh.getRange('D:D').setNumberFormat('@');          // keep "2/62" from turning into a date
+    sh.getRange('F:F').setNumberFormat('mmm d, yyyy');
+    sh.setColumnWidth(1, 200);
+    sh.setColumnWidth(3, 220);
+  }
+  return sh;
+}
+
+function json_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function list_() {
+  const values = sheet_().getDataRange().getValues();
+  const owned = {};
+  for (let i = 1; i < values.length; i++) {
+    const key = String(values[i][0] || '');
+    if (!key) continue;
+    const at = values[i][5];
+    owned[key] = { have: true, at: at instanceof Date ? at.toISOString() : String(at || '') };
+  }
+  return { ok: true, owned: owned };
+}
+
+// Apply changes in order: [{key, have, at, card, set, num, finish}, ...]
+function applyOps_(ops) {
+  if (!ops || !ops.length) return;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = sheet_();
+    const values = sh.getDataRange().getValues();
+    const rows = new Map();
+    for (let i = 1; i < values.length; i++) {
+      if (values[i][0]) rows.set(String(values[i][0]), values[i].slice(0, HEADERS.length));
+    }
+    ops.forEach(function (op) {
+      if (!op || !op.key) return;
+      if (op.have) {
+        if (!rows.has(op.key)) {
+          rows.set(op.key, [op.key, op.card || '', op.set || '', op.num || '', op.finish || '', op.at ? new Date(op.at) : new Date()]);
+        }
+      } else {
+        rows.delete(op.key);
+      }
+    });
+    const oldCount = Math.max(values.length - 1, 0);
+    if (oldCount) sh.getRange(2, 1, oldCount, HEADERS.length).clearContent();
+    const out = Array.from(rows.values());
+    if (out.length) sh.getRange(2, 1, out.length, HEADERS.length).setValues(out);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Called by the binder page.
+function api(ops) {
+  applyOps_(ops);
+  return list_();
+}
+
+// The plain link opens the binder. Older downloaded copies of the binder file ask for ?t=... and get the collection as JSON.
+function doGet(e) {
+  const p = (e && e.parameter) || {};
+  if (p.t || p.api) {
+    try {
+      return json_(list_());
+    } catch (err) {
+      return json_({ ok: false, error: String(err) });
+    }
+  }
+  return HtmlService.createHtmlOutputFromFile('Binder')
+    .setTitle('{{TITLE}}')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover');
+}
+
+// Used by older downloaded copies of the binder file.
+function doPost(e) {
+  try {
+    const body = JSON.parse(e.postData.contents || '{}');
+    applyOps_(body.ops || []);
+    return json_(list_());
+  } catch (err) {
+    return json_({ ok: false, error: String(err) });
+  }
+}

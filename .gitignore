@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+# binder work folders and build output
+binders/
+*/raw/
+*/cards/
+*/small/
+artifact/
+sheet/
+cards.json
+data.json
+imgurls.json
+meta.json
+overrides.json

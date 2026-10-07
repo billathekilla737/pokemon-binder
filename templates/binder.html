@@ -1,0 +1,565 @@
+<title>{{TITLE}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a leather binder lying open on a desk. Two 9-pocket pages either side of a ring spine; one page on phones. */
+:root {
+  --desk: #dbe2e8;
+  --cover: {{L_COVER}};
+  --cover-hi: {{L_COVER_HI}};
+  --page: #f4f7f9;
+  --slot: #e2e8ed;
+  --rule: #c8d2db;
+  --ink: #142230;
+  --muted: #5a6b7b;
+  --ice: {{L_ACCENT}};
+  --ice-soft: {{L_ACCENT_SOFT}};
+  --on-accent: #ffffff;
+  --have: #1c7a4b;
+  --have-soft: #d9f0e3;
+  --ring: #b9c3cc;
+  --shadow: 0 1px 2px rgba(15, 30, 45, .18), 0 10px 28px rgba(15, 30, 45, .16);
+  --f-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --spine: 34px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --desk: #0d1319; --cover: {{D_COVER}}; --cover-hi: {{D_COVER_HI}}; --page: #17212b; --slot: #111a22;
+    --rule: #26343f; --ink: #e5edf3; --muted: #92a3b2; --ice: {{D_ACCENT}}; --ice-soft: {{D_ACCENT_SOFT}}; --on-accent: #0b1218;
+    --have: #4cc284; --have-soft: #123726; --ring: #5d6b77;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 12px 30px rgba(0, 0, 0, .45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --desk: #0d1319; --cover: {{D_COVER}}; --cover-hi: {{D_COVER_HI}}; --page: #17212b; --slot: #111a22;
+  --rule: #26343f; --ink: #e5edf3; --muted: #92a3b2; --ice: {{D_ACCENT}}; --ice-soft: {{D_ACCENT_SOFT}}; --on-accent: #0b1218;
+  --have: #4cc284; --have-soft: #123726; --ring: #5d6b77;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 12px 30px rgba(0, 0, 0, .45);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--desk); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; display: grid; gap: 18px; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--ice); outline-offset: 2px; }
+
+/* Header */
+.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px 32px; }
+.title h1 { margin: 0; font-family: var(--f-display); font-stretch: 125%; font-weight: 850; font-size: clamp(28px, 5vw, 44px); line-height: 1; letter-spacing: -.01em; text-wrap: balance; }
+.title p { margin: 6px 0 0; color: var(--muted); max-width: 60ch; }
+.dex { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ice); font-weight: 600; }
+.tally { display: grid; gap: 8px; min-width: min(100%, 340px); }
+.tally-main { display: flex; align-items: baseline; gap: 10px; }
+.tally-main strong { font-family: var(--f-display); font-stretch: 110%; font-size: 34px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.tally-main span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.bar { height: 8px; border-radius: 99px; background: var(--slot); overflow: hidden; border: 1px solid var(--rule); }
+.bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--ice), var(--have)); transition: width .4s ease; }
+.kinds { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.kinds b { color: var(--ink); font-weight: 600; }
+.save-note { font-size: 12px; color: var(--muted); }
+
+/* Controls */
+.controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; background: var(--page); }
+.seg button { border: 0; background: none; padding: 7px 12px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--ice-soft); color: var(--ink); font-weight: 600; }
+.jump { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.jump select { font: inherit; font-size: 13px; color: var(--ink); background: var(--page); border: 1px solid var(--rule); border-radius: 8px; padding: 6px 8px; max-width: 220px; }
+
+/* Binder */
+.binder { background: linear-gradient(160deg, var(--cover-hi), var(--cover) 55%); border-radius: 18px; padding: 14px; box-shadow: var(--shadow); touch-action: pan-y; }
+.spread { position: relative; display: grid; grid-template-columns: 1fr var(--spine) 1fr; perspective: 2400px; }
+.page { background: var(--page); padding: 14px 14px 10px; display: grid; grid-template-rows: auto auto; gap: 8px; min-width: 0; }
+.page.left { border-radius: 8px 2px 2px 8px; box-shadow: inset -14px 0 18px -14px rgba(0,0,0,.35); }
+.page.right { border-radius: 2px 8px 8px 2px; box-shadow: inset 14px 0 18px -14px rgba(0,0,0,.35); }
+.spine { background: var(--cover); display: flex; flex-direction: column; justify-content: space-around; align-items: center; padding-block: 12%; }
+.spine i { width: 26px; height: 12px; border-radius: 99px; border: 3px solid var(--ring); background: linear-gradient(var(--ring), transparent); }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 10px; }
+.foot { display: flex; justify-content: space-between; font-family: var(--f-mono); font-size: 11px; color: var(--muted); padding-top: 2px; }
+.page.left .foot { flex-direction: row-reverse; }
+.blank-note { grid-column: 1 / -1; grid-row: 1 / 4; display: grid; place-items: center; color: var(--muted); font-size: 13px; text-align: center; padding: 20px; }
+
+.single .spread { grid-template-columns: var(--spine) 1fr; }
+.single .page.right { display: none; }
+.single .page.left { border-radius: 2px 8px 8px 2px; box-shadow: inset 14px 0 18px -14px rgba(0,0,0,.35); grid-column: 2; grid-row: 1; }
+.single .spine { grid-column: 1; grid-row: 1; }
+.single .page.left .foot { flex-direction: row; }
+
+/* Pockets */
+.pocket { display: grid; gap: 5px; min-width: 0; position: relative; }
+.sleeve { position: relative; aspect-ratio: 63 / 88; border-radius: 6px; background: var(--slot); border: 1px dashed var(--rule); overflow: hidden; padding: 0; cursor: pointer; display: block; width: 100%; }
+.sleeve img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 5px; filter: grayscale(1) contrast(.85); opacity: .32; transition: filter .3s, opacity .3s, transform .2s; }
+.sleeve::after { content: ""; position: absolute; inset: 0; background: linear-gradient(125deg, rgba(255,255,255,.28), rgba(255,255,255,0) 38%, rgba(255,255,255,0) 70%, rgba(255,255,255,.12)); pointer-events: none; }
+.sleeve:hover img { opacity: .5; }
+.pocket.have .sleeve { border: 1px solid transparent; background: transparent; box-shadow: 0 1px 2px rgba(0,0,0,.25), 0 4px 10px rgba(0,0,0,.14); }
+.pocket.have .sleeve img { filter: none; opacity: 1; }
+.pocket.have .sleeve:hover img { transform: scale(1.015); }
+.missing-slip { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-family: var(--f-display); font-stretch: 112%; font-weight: 700; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); background: var(--page); padding: 3px 7px; border-radius: 4px; border: 1px solid var(--rule); white-space: nowrap; pointer-events: none; }
+.pocket.have .missing-slip { display: none; }
+.pocket.flash .sleeve { animation: flash 1.6s ease-out; }
+@keyframes flash { 0%, 45% { box-shadow: 0 0 0 3px var(--ice); } 100% { box-shadow: 0 0 0 3px transparent; } }
+
+/* Foil: holo shimmers across the whole card, reverse holo gets a speckled sheen */
+.foil { position: absolute; inset: 0; pointer-events: none; opacity: 0; border-radius: 5px; mix-blend-mode: color-dodge; transition: opacity .3s; --mx: 50%; --my: 50%; }
+.pocket.have.k-holo .foil { opacity: .55; background: linear-gradient(115deg, transparent 15%, rgba(255, 70, 190, .55) 32%, rgba(80, 230, 255, .6) 46%, rgba(255, 245, 120, .5) 60%, rgba(120, 255, 170, .45) 72%, transparent 88%); background-size: 260% 260%; background-position: var(--mx) var(--my); }
+.pocket.have.k-reverse .foil { opacity: .5; background: radial-gradient(circle at var(--mx) var(--my), rgba(255,255,255,.45), transparent 45%), repeating-linear-gradient(45deg, rgba(120, 220, 255, .35) 0 2px, transparent 2px 7px), repeating-linear-gradient(-45deg, rgba(255, 150, 230, .3) 0 2px, transparent 2px 7px); }
+@media (prefers-reduced-motion: no-preference) {
+  .pocket.have.k-holo .foil { animation: sheen 6s ease-in-out infinite alternate; }
+}
+@keyframes sheen { from { background-position: 0% 30%; } to { background-position: 100% 70%; } }
+
+.tick { position: absolute; top: -6px; right: -6px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--page); background: var(--ice); color: var(--on-accent); display: grid; place-items: center; cursor: pointer; padding: 0; box-shadow: 0 1px 3px rgba(0,0,0,.3); z-index: 2; }
+.tick svg { width: 14px; height: 14px; }
+.tick[aria-pressed="true"] { background: var(--have); }
+.readonly .tick { display: none; }
+
+.tag { display: grid; gap: 2px; min-width: 0; }
+.tag-row { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; min-width: 0; }
+.fin { font-family: var(--f-display); font-stretch: 105%; font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; line-height: 1.5; white-space: nowrap; }
+.fin.k-holo { color: #1b1530; background: linear-gradient(100deg, #ffb3e6, #b5f1ff 45%, #fff3a8 80%); }
+.fin.k-reverse { color: var(--ink); background: var(--page); border: 1.5px solid transparent; background-image: linear-gradient(var(--page), var(--page)), linear-gradient(100deg, #ff7ad5, #5fd8ff, #ffe45c); background-origin: border-box; background-clip: padding-box, border-box; }
+.fin.k-nonholo { color: var(--muted); background: var(--slot); border: 1px solid var(--rule); }
+.ed { font-family: var(--f-mono); font-size: 10px; color: var(--ink); background: var(--ice-soft); padding: 1px 5px; border-radius: 4px; white-space: nowrap; }
+.setline { display: flex; gap: 6px; font-size: 11px; color: var(--muted); min-width: 0; line-height: 1.3; }
+.setline .sn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.setline .no { font-family: var(--f-mono); flex: none; color: var(--ink); }
+
+/* Flip */
+.flip { position: absolute; top: 0; z-index: 5; transform-style: preserve-3d; pointer-events: none; }
+.flip .face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.flip .face.back { transform: rotateY(180deg); }
+.flip .face .page { height: 100%; }
+
+/* Nav */
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.nav button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--rule); background: var(--page); border-radius: 8px; padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: 14px; }
+.nav button:disabled { opacity: .4; cursor: default; }
+.nav .where { font-family: var(--f-mono); font-size: 13px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+.hint { font-size: 12px; color: var(--muted); text-align: center; }
+
+/* Detail dialog */
+dialog { border: 0; padding: 0; border-radius: 14px; background: var(--page); color: var(--ink); box-shadow: var(--shadow); width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 32px); }
+dialog::backdrop { background: rgba(5, 12, 20, .6); }
+.dlg { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 22px; padding: 22px; }
+.dlg .pocket { align-self: start; }
+.dlg .sleeve { cursor: default; }
+.dlg h2 { margin: 0; font-family: var(--f-display); font-stretch: 118%; font-weight: 800; font-size: 26px; line-height: 1.1; text-wrap: balance; }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 14px 0 18px; font-size: 14px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; }
+.facts .mono { font-family: var(--f-mono); }
+.dlg h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.vlist { display: grid; gap: 8px; }
+.vrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 10px; }
+.vrow.have { background: var(--have-soft); border-color: transparent; }
+.vrow .lbl { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.vrow .lbl small { color: var(--muted); font-size: 12px; }
+.vrow button { border: 1px solid var(--rule); background: var(--page); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: 600; font-size: 13px; white-space: nowrap; }
+.vrow.have button { border-color: var(--have); color: var(--have); }
+.vrow:not(.have) button { background: var(--ice); color: var(--on-accent); border-color: var(--ice); }
+.readonly .vrow button { display: none; }
+.dlg-close { position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--rule); background: var(--page); cursor: pointer; display: grid; place-items: center; }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--page); padding: 9px 16px; border-radius: 8px; font-size: 14px; box-shadow: var(--shadow); z-index: 20; max-width: calc(100vw - 32px); }
+
+@media (max-width: 719px) {
+  :root { --spine: 22px; }
+  .binder { padding: 10px; border-radius: 14px; }
+  .spine i { width: 16px; height: 9px; border-width: 2px; }
+  .grid { gap: 10px 8px; }
+  .page { padding: 10px 10px 8px; }
+}
+@media (max-width: 560px) {
+  .dlg { grid-template-columns: 1fr; padding: 18px; }
+  .dlg .pocket { max-width: 220px; justify-self: center; width: 100%; }
+  .setline .sn { display: none; }
+  .fin { font-size: 9.5px; padding: 1px 4px; }
+  .tick { width: 26px; height: 26px; }
+}
+</style>
+
+<div class="wrap" id="app">
+  <header class="top">
+    <div class="title">
+      <div class="dex">{{DEX_LINE}}</div>
+      <h1>{{TITLE}}</h1>
+      <p>Every English printing of {{POKEMON}}, one pocket per finish. Tap <b>+</b> on a pocket when you pull that card, or open a card to see all of its versions.</p>
+    </div>
+    <div class="tally" aria-live="polite">
+      <div class="tally-main"><strong id="t-have">0</strong><span id="t-total">of 0 collected</span></div>
+      <div class="bar"><i id="t-bar"></i></div>
+      <div class="kinds" id="t-kinds"></div>
+      <div class="save-note" id="save-note">Connecting to your binder…</div>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Show">
+      <button type="button" data-status="all" aria-pressed="true">All</button>
+      <button type="button" data-status="missing" aria-pressed="false">Missing</button>
+      <button type="button" data-status="have" aria-pressed="false">Collected</button>
+    </div>
+    <div class="seg" role="group" aria-label="Finish">
+      <button type="button" data-kind="all" aria-pressed="true">Every finish</button>
+      <button type="button" data-kind="holo" aria-pressed="false">Holo</button>
+      <button type="button" data-kind="reverse" aria-pressed="false">Reverse</button>
+      <button type="button" data-kind="nonholo" aria-pressed="false">Non-Holo</button>
+    </div>
+    <label class="jump" for="jump">Jump to set
+      <select id="jump"></select>
+    </label>
+  </div>
+
+  <div class="binder" id="binder">
+    <div class="spread" id="spread">
+      <section class="page left" id="pageL" aria-label="Left page"></section>
+      <div class="spine" aria-hidden="true"><i></i><i></i><i></i></div>
+      <section class="page right" id="pageR" aria-label="Right page"></section>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button type="button" id="prev" aria-label="Previous page"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Back</button>
+    <div>
+      <div class="where" id="where"></div>
+      <div class="hint">Arrow keys or swipe to turn pages</div>
+    </div>
+    <button type="button" id="next" aria-label="Next page">Next<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </div>
+</div>
+
+<dialog id="detail" aria-labelledby="d-name">
+  <div style="position:relative">
+    <button type="button" class="dlg-close" id="d-close" aria-label="Close"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 2l10 10M12 2 2 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <div class="dlg" id="d-body"></div>
+  </div>
+</dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+const CARDS = {{CARDS_JSON}};
+
+const FIN = {
+  normal:             { kind: "nonholo", label: "Non-Holo" },
+  "1stEdition":       { kind: "nonholo", label: "Non-Holo", ed: "1st Edition", edShort: "1st Ed." },
+  unlimited:          { kind: "nonholo", label: "Non-Holo", ed: "Unlimited", edShort: "Unl." },
+  holofoil:           { kind: "holo",    label: "Holo" },
+  "1stEditionHolofoil": { kind: "holo",  label: "Holo", ed: "1st Edition", edShort: "1st Ed." },
+  unlimitedHolofoil:  { kind: "holo",    label: "Holo", ed: "Unlimited", edShort: "Unl." },
+  reverseHolofoil:    { kind: "reverse", label: "Reverse Holo", short: "Rev. Holo" },
+};
+const KIND_NAME = { holo: "Holo", reverse: "Reverse Holo", nonholo: "Non-Holo" };
+const SLOTS = CARDS.flatMap(c => c.v.map(v => ({ key: c.id + "~" + v, card: c, fin: v, ...FIN[v] })));
+const PER_PAGE = 9;
+
+const $ = s => document.querySelector(s);
+const app = $("#app"), binder = $("#binder"), pageL = $("#pageL"), pageR = $("#pageR"), spreadEl = $("#spread");
+let owned = new Map();
+let db = null, readOnly = false;
+let filt = { status: "all", kind: "all" };
+let jumpSet = null;      // the set last picked in "Jump to set"
+let p = 0;              // index of the left-hand (or only) page
+let animating = false, pendingRender = false;
+const pending = new Set();
+const mqSpread = matchMedia("(min-width: 720px)");
+const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+
+const esc = s => String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+const fmtDate = d => new Date(d.replace(/\//g, "-") + "T12:00:00").toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+const isSpread = () => mqSpread.matches;
+
+function visibleSlots() {
+  return SLOTS.filter(s =>
+    (filt.kind === "all" || s.kind === filt.kind) &&
+    (filt.status === "all" || (filt.status === "have") === owned.has(s.key)));
+}
+function pageCount(list) { return Math.max(1, Math.ceil(list.length / PER_PAGE)); }
+function normP(n, list) {
+  const max = pageCount(list) - 1;
+  n = Math.max(0, Math.min(n, max));
+  return isSpread() ? n - (n % 2) : n;
+}
+
+const PLUS = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>';
+const CHECK = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="m2.5 7.5 3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+function finBadge(s, full) {
+  return `<span class="fin k-${s.kind}">${esc(full ? s.label : (s.short || s.label))}</span>${s.ed ? `<span class="ed">${esc(s.edShort)}</span>` : ""}`;
+}
+function slotDesc(s) {
+  return `${s.card.name}, ${s.card.set} ${s.card.num}/${s.card.total}, ${s.ed ? s.ed + " " : ""}${s.label}`;
+}
+function pocketHTML(s, opts = {}) {
+  const have = owned.has(s.key);
+  const c = s.card;
+  return `<div class="pocket k-${s.kind}${have ? " have" : ""}" data-key="${esc(s.key)}" data-set="${esc(c.set)}">
+    <button type="button" class="sleeve" data-open="${esc(s.key)}" ${opts.static ? 'tabindex="-1"' : ""} aria-label="${esc(slotDesc(s))}. ${have ? "Collected" : "Missing"}. Show details">
+      <img src="cards/${esc(c.id)}.webp" alt="" loading="lazy" decoding="async" width="440" height="614">
+      <span class="foil"></span>
+      <span class="missing-slip">Missing</span>
+    </button>
+    ${opts.noTick ? "" : `<button type="button" class="tick" data-toggle="${esc(s.key)}" aria-pressed="${have}" aria-label="${have ? "Remove" : "Add"} ${esc(slotDesc(s))} ${have ? "from" : "to"} collection">${have ? CHECK : PLUS}</button>`}
+    ${opts.noTag ? "" : `<div class="tag">
+      <div class="tag-row">${finBadge(s)}</div>
+      <div class="setline"><span class="sn">${esc(c.set)}</span><span class="no">${esc(c.num)}/${esc(c.total)}</span></div>
+    </div>`}
+  </div>`;
+}
+
+function pageHTML(idx, list) {
+  const total = pageCount(list);
+  const items = list.slice(idx * PER_PAGE, idx * PER_PAGE + PER_PAGE);
+  let grid;
+  if (idx >= total) {
+    grid = `<div class="blank-note">End of the binder.<br>New {{POKEMON}} printings will get a pocket here.</div>`;
+  } else if (!items.length) {
+    grid = `<div class="blank-note">${filt.status === "have" ? "Nothing collected with this filter yet." : "Every card in this filter is collected."}</div>`;
+  } else {
+    grid = items.map(s => pocketHTML(s)).join("");
+    for (let i = items.length; i < PER_PAGE; i++) grid += `<div class="pocket"><div class="sleeve" style="cursor:default"></div></div>`;
+  }
+  const label = idx < total ? `p. ${idx + 1}` : "";
+  const range = items.length ? `${items[0].card.date.slice(0, 4)}${items.at(-1).card.date.slice(0, 4) !== items[0].card.date.slice(0, 4) ? "–" + items.at(-1).card.date.slice(0, 4) : ""}` : "";
+  return `<div class="grid">${grid}</div><div class="foot"><span>${label}</span><span>${range}</span></div>`;
+}
+
+function renderTally() {
+  const have = SLOTS.filter(s => owned.has(s.key)).length;
+  $("#t-have").textContent = have;
+  $("#t-total").textContent = `of ${SLOTS.length} collected`;
+  $("#t-bar").style.width = (100 * have / SLOTS.length).toFixed(1) + "%";
+  $("#t-kinds").innerHTML = ["holo", "reverse", "nonholo"].map(k => {
+    const all = SLOTS.filter(s => s.kind === k);
+    return `<span>${KIND_NAME[k]} <b>${all.filter(s => owned.has(s.key)).length}/${all.length}</b></span>`;
+  }).join("");
+}
+
+function renderJump(list) {
+  const sel = $("#jump");
+  const seen = new Map();
+  list.forEach((s, i) => { if (!seen.has(s.card.set)) seen.set(s.card.set, { i, year: s.card.date.slice(0, 4) }); });
+  const shown = list.slice(p * PER_PAGE, (p + (isSpread() ? 2 : 1)) * PER_PAGE).map(s => s.card.set);
+  const cur = jumpSet && shown.includes(jumpSet) ? jumpSet : shown[0];
+  sel.innerHTML = [...seen].map(([name, v]) => `<option value="${v.i}"${name === cur ? " selected" : ""}>${esc(v.year)} · ${esc(name)}</option>`).join("");
+  sel.disabled = !seen.size;
+}
+
+function render() {
+  if (animating) { pendingRender = true; return; }
+  const list = visibleSlots();
+  p = normP(p, list);
+  app.classList.toggle("single", !isSpread());
+  pageL.innerHTML = pageHTML(p, list);
+  if (isSpread()) pageR.innerHTML = pageHTML(p + 1, list);
+  const total = pageCount(list);
+  const shownLast = isSpread() ? Math.min(p + 2, total) : p + 1;
+  $("#where").textContent = isSpread() && shownLast > p + 1 ? `Pages ${p + 1}–${shownLast} of ${total}` : `Page ${p + 1} of ${total}`;
+  $("#prev").disabled = p === 0;
+  $("#next").disabled = p + (isSpread() ? 2 : 1) >= total;
+  renderTally();
+  renderJump(list);
+  if ($("#detail").open) renderDetail();
+}
+
+/* Page turning */
+function turn(dir) {
+  if (animating) return;
+  const list = visibleSlots();
+  const step = isSpread() ? 2 : 1;
+  const np = normP(p + dir * step, list);
+  if (np === p) return;
+  if (reduced.matches) { p = np; render(); return; }
+  if (!isSpread()) {
+    p = np; render();
+    pageL.animate([{ opacity: 0, transform: `translateX(${dir * 24}px)` }, { opacity: 1, transform: "none" }], { duration: 260, easing: "ease-out" });
+    return;
+  }
+  animating = true;
+  const fromPage = dir > 0 ? pageR : pageL;
+  const flip = document.createElement("div");
+  flip.className = "flip";
+  flip.style.left = fromPage.offsetLeft + "px";
+  flip.style.width = fromPage.offsetWidth + "px";
+  flip.style.height = fromPage.offsetHeight + "px";
+  flip.style.transformOrigin = dir > 0 ? `calc(var(--spine) / -2) 50%` : `calc(100% + var(--spine) / 2) 50%`;
+  const front = document.createElement("div"); front.className = "face front";
+  const back = document.createElement("div"); back.className = "face back";
+  const frontPage = fromPage.cloneNode(true); frontPage.removeAttribute("id");
+  const backPage = document.createElement("section");
+  backPage.className = "page " + (dir > 0 ? "left" : "right");
+  backPage.innerHTML = pageHTML(dir > 0 ? np : np + 1, list);
+  front.append(frontPage); back.append(backPage);
+  flip.append(front, back);
+  // Underneath the turning leaf, reveal the page that will stay put after the turn.
+  if (dir > 0) pageR.innerHTML = pageHTML(np + 1, list); else pageL.innerHTML = pageHTML(np, list);
+  spreadEl.append(flip);
+  const anim = flip.animate(
+    [{ transform: "rotateY(0deg)" }, { transform: `rotateY(${dir > 0 ? -180 : 180}deg)` }],
+    { duration: 620, easing: "cubic-bezier(.4,.05,.25,1)" });
+  anim.onfinish = anim.oncancel = () => {
+    flip.remove();
+    animating = false;
+    p = np;
+    pendingRender = false;
+    render();
+  };
+}
+
+/* Collection state */
+function saveLocal() {
+  try { localStorage.setItem("{{SLUG}}-binder", JSON.stringify([...owned])); } catch (e) {}
+}
+function loadLocal() {
+  try { const raw = localStorage.getItem("{{SLUG}}-binder"); if (raw) owned = new Map(JSON.parse(raw)); } catch (e) {}
+}
+let toastTimer;
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+}
+
+async function setOwned(key, have) {
+  if (readOnly || pending.has(key)) return;
+  const prev = owned.get(key);
+  const rec = { have: true, at: new Date().toISOString() };
+  pending.add(key);
+  if (have) owned.set(key, rec); else owned.delete(key);
+  render();
+  try {
+    if (db) {
+      const ref = db.collection("owned").doc(key);
+      if (have) await ref.set(rec); else await ref.delete();
+    } else saveLocal();
+  } catch (e) {
+    if (prev) owned.set(key, prev); else owned.delete(key);
+    if (e && e.code === "invalid_argument") { setReadOnly(true); toast("This binder is view-only for you."); }
+    else toast("Couldn't save that change. Check your connection and try again.");
+    render();
+  } finally { pending.delete(key); }
+}
+function setReadOnly(v) { readOnly = v; app.classList.toggle("readonly", v); $("#detail").classList.toggle("readonly", v); }
+
+/* Detail */
+let detailCard = null;
+function renderDetail() {
+  const c = detailCard; if (!c) return;
+  const slots = SLOTS.filter(s => s.card === c);
+  const show = slots.find(s => owned.has(s.key) && s.kind !== "nonholo") || slots.find(s => owned.has(s.key)) || slots[0];
+  $("#d-body").innerHTML = `
+    ${pocketHTML(show, { noTick: true, noTag: true, static: true })}
+    <div>
+      <h2 id="d-name">${esc(c.name)}</h2>
+      <dl class="facts">
+        <dt>Set</dt><dd>${esc(c.set)}</dd>
+        <dt>Series</dt><dd>${esc(c.series)}</dd>
+        <dt>Number</dt><dd class="mono">${esc(c.num)}/${esc(c.total)}</dd>
+        <dt>Released</dt><dd>${esc(fmtDate(c.date))}</dd>
+        ${c.rarity ? `<dt>Rarity</dt><dd>${esc(c.rarity)}</dd>` : ""}
+      </dl>
+      <h3>Finishes in this binder</h3>
+      <div class="vlist">${slots.map(s => {
+        const o = owned.get(s.key);
+        return `<div class="vrow${o ? " have" : ""}">
+          <div class="lbl"><div class="tag-row">${finBadge(s, true)}</div><small>${o ? "Collected " + esc(new Date(o.at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })) : "Missing"}</small></div>
+          <button type="button" data-toggle="${esc(s.key)}">${o ? "Remove" : "Add to binder"}</button>
+        </div>`;
+      }).join("")}</div>
+    </div>`;
+}
+function openDetail(key) {
+  const s = SLOTS.find(x => x.key === key); if (!s) return;
+  detailCard = s.card; renderDetail();
+  const d = $("#detail");
+  if (!d.open) { try { d.showModal(); } catch (e) { d.setAttribute("open", ""); } }
+}
+
+/* Events */
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-toggle]");
+  if (t) { setOwned(t.dataset.toggle, !owned.has(t.dataset.toggle)); return; }
+  const o = e.target.closest("[data-open]");
+  if (o && !o.closest("dialog")) openDetail(o.dataset.open);
+});
+$("#d-close").addEventListener("click", () => $("#detail").close());
+$("#detail").addEventListener("click", e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+$("#prev").addEventListener("click", () => turn(-1));
+$("#next").addEventListener("click", () => turn(1));
+document.addEventListener("keydown", e => {
+  if ($("#detail").open || /SELECT|INPUT|TEXTAREA/.test(document.activeElement?.tagName || "")) return;
+  if (e.key === "ArrowRight") turn(1);
+  if (e.key === "ArrowLeft") turn(-1);
+});
+document.querySelectorAll("[data-status]").forEach(b => b.addEventListener("click", () => {
+  filt.status = b.dataset.status; p = 0;
+  document.querySelectorAll("[data-status]").forEach(x => x.setAttribute("aria-pressed", x === b));
+  render();
+}));
+document.querySelectorAll("[data-kind]").forEach(b => b.addEventListener("click", () => {
+  filt.kind = b.dataset.kind; p = 0;
+  document.querySelectorAll("[data-kind]").forEach(x => x.setAttribute("aria-pressed", x === b));
+  render();
+}));
+$("#jump").addEventListener("change", e => {
+  const i = +e.target.value;
+  jumpSet = visibleSlots()[i]?.card.set || null;
+  p = Math.floor(i / PER_PAGE);
+  render();
+  if (!jumpSet) return;
+  document.querySelectorAll(".pocket[data-set]").forEach(el => {
+    if (el.dataset.set !== jumpSet) return;
+    el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
+  });
+});
+mqSpread.addEventListener("change", render);
+
+// Pointer-follow sheen on collected foils
+binder.addEventListener("pointermove", e => {
+  const sl = e.target.closest(".pocket.have .sleeve"); if (!sl) return;
+  const r = sl.getBoundingClientRect(), f = sl.querySelector(".foil");
+  f.style.setProperty("--mx", ((e.clientX - r.left) / r.width * 100).toFixed(0) + "%");
+  f.style.setProperty("--my", ((e.clientY - r.top) / r.height * 100).toFixed(0) + "%");
+});
+// Swipe to turn on touch screens
+let sx = null, sy = null;
+binder.addEventListener("pointerdown", e => { if (e.pointerType === "touch") { sx = e.clientX; sy = e.clientY; } });
+binder.addEventListener("pointerup", e => {
+  if (sx === null) return;
+  const dx = e.clientX - sx, dy = e.clientY - sy; sx = null;
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) turn(dx < 0 ? 1 : -1);
+});
+
+/* Boot: draw from this browser right away, then switch to the shared binder store when it answers */
+loadLocal();
+render();
+$("#save-note").textContent = "Saved in this browser";
+(async () => {
+  if (!window.claude?.use) return;
+  try {
+    const store = await window.claude.use("db");
+    if (!store) return;
+    db = store;
+    $("#save-note").textContent = "Loading your collection…";
+    try {
+      const user = await window.claude.use("user");
+      const can = user ? await user.can("data.write") : null;
+      if (can === false) setReadOnly(true);
+    } catch (e) {}
+    db.collection("owned").onSnapshot(snap => {
+      const next = new Map();
+      snap.docs.forEach(d => { if (d.exists) next.set(d.id, d.data()); });
+      pending.forEach(k => { if (owned.has(k)) next.set(k, owned.get(k)); else next.delete(k); });
+      owned = next;
+      $("#save-note").textContent = readOnly ? "Viewing a shared binder (read-only)" : "Saved to your binder, synced across devices";
+      render();
+    }, () => {
+      db = null;
+      $("#save-note").textContent = "Saved in this browser";
+    });
+  } catch (e) {}
+})();
+</script>
