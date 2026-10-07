@@ -71,6 +71,15 @@ button { font: inherit; color: inherit; }
 .seg button[aria-pressed="true"] { background: var(--ice-soft); color: var(--ink); font-weight: 600; }
 .jump { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .jump select { font: inherit; font-size: 13px; color: var(--ink); background: var(--page); border: 1px solid var(--rule); border-radius: 8px; padding: 6px 8px; max-width: 220px; }
+.finder { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.search { flex: 1 1 260px; max-width: 440px; min-width: 0; display: flex; align-items: center; gap: 8px; background: var(--page); border: 1px solid var(--rule); border-radius: 8px; padding: 0 10px; color: var(--muted); }
+.search:focus-within { outline: 3px solid var(--ice); outline-offset: 2px; }
+.search input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 16px; padding: 8px 0; outline: none; }
+.search input::placeholder { color: var(--muted); }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.search-note { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 14px; color: var(--muted); }
+.search-note b { color: var(--ink); font-weight: 600; }
+.search-note button { border: 1px solid var(--rule); background: var(--page); border-radius: 8px; padding: 4px 10px; cursor: pointer; font-size: 13px; font-weight: 600; }
 
 /* Binder */
 .binder { background: linear-gradient(160deg, var(--cover-hi), var(--cover) 55%); border-radius: 18px; padding: 14px; box-shadow: var(--shadow); touch-action: pan-y; }
@@ -198,6 +207,25 @@ dialog::backdrop { background: rgba(5, 12, 20, .6); }
     </div>
   </header>
 
+  <div class="finder">
+    <label class="search" for="q">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m10.5 10.5 3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span class="vh">Search cards</span>
+      <input id="q" type="search" placeholder="Search: 2/62, SWSH123, Fossil…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+    </label>
+    <label class="jump" for="sort">Sort by
+      <select id="sort">
+        <option value="release">Release date, oldest first</option>
+        <option value="newest">Release date, newest first</option>
+        <option value="number">Card number</option>
+        <option value="set">Set name (A–Z)</option>
+        <option value="name">Card name (A–Z)</option>
+        <option value="finish">Finish (holo first)</option>
+      </select>
+    </label>
+  </div>
+  <div class="search-note" id="search-note" role="status" hidden></div>
+
   <div class="controls">
     <div class="seg" role="group" aria-label="Show">
       <button type="button" data-status="all" aria-pressed="true">All</button>
@@ -263,6 +291,10 @@ let owned = new Map();
 let db = null, readOnly = false;
 let filt = { status: "all", kind: "all" };
 let jumpSet = null;      // the set last picked in "Jump to set"
+let query = "";          // the search box
+const SORT_KEY = "{{SLUG}}-binder-sort";
+let sortBy = "release";
+try { const v = localStorage.getItem(SORT_KEY); if (v) sortBy = v; } catch (e) {}
 let p = 0;              // index of the left-hand (or only) page
 let animating = false, pendingRender = false;
 const pending = new Set();
@@ -273,10 +305,105 @@ const esc = s => String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;
 const fmtDate = d => new Date(d.replace(/\//g, "-") + "T12:00:00").toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 const isSpread = () => mqSpread.matches;
 
+/* Search. Card numbers are printed many ways (2/62, 002/062, SWSH051, SM-144, H3, TG16), so numbers are
+   compared after dropping spaces, #, dashes and leading zeros. */
+const normNum = s => String(s).toLowerCase().replace(/[\s#._-]+/g, "").replace(/\d+/g, d => String(parseInt(d, 10)));
+const digitsOf = s => String(s).replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+CARDS.forEach(c => {
+  c._n = normNum(c.num);                         // "swsh51", "2", "h3"
+  c._d = digitsOf(c.num);                        // "51", "2", "3"
+  c._t = digitsOf(c.total);                      // "62"
+  c._hay = [c.name, c.set, c.series, c.date.slice(0, 4), c.rarity].join(" ").toLowerCase().replace(/['’]/g, "");
+});
+SLOTS.forEach(s => { s._hay = `${s.card._hay} ${s.label} ${s.ed || ""} ${KIND_NAME[s.kind]}`.toLowerCase(); });
+const NUM_SORT_KEY = c => { const m = String(c.num).match(/^([A-Za-z]*)(\d+)/); return m ? [m[1] ? 1 : 0, m[1].toUpperCase(), +m[2]] : [2, String(c.num), 0]; };
+
+function tokenScore(t, s) {
+  const c = s.card;
+  if (t.includes("/")) {
+    const [a, b] = t.split("/");
+    const na = normNum(a), nb = digitsOf(b || "");
+    if (!na) return nb && nb === c._t ? 30 : 0;   // "/62": every card from a 62-card set
+    const numOk = na === c._n || na === c._d;
+    if (numOk && (!nb || nb === c._t)) return 100;
+    return numOk ? 70 : 0;                       // right number, different set size
+  }
+  const n = normNum(t);
+  if (n && n === c._n) return 100;
+  if (/^\d+$/.test(n) && n === c._d) return 85;  // "144" finds SM144
+  if (/^\d+$/.test(n) && n === c._t) return 25;  // matches the set size in "2 62"
+  if (n.length >= 2 && c._n.startsWith(n)) return 50;
+  if (t.length >= 2 && s._hay.includes(t)) return 40;
+  return 0;
+}
+function lev(a, b) {
+  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row[0]; row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const tmp = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = tmp;
+    }
+  }
+  return row[b.length];
+}
+// Returns {list, mode: "exact" | "closest" | "none"} for the current query.
+function searchSlots(slots, q) {
+  q = q.trim().toLowerCase().replace(/\s*\/\s*/g, "/").replace(/[#'’]/g, "");
+  const tokens = q.split(/\s+/).filter(Boolean);
+  const compact = q.replace(/\s+/g, "");
+  const scored = [];
+  for (const s of slots) {
+    let sum = 0, all = true;
+    for (const t of tokens) { const v = tokenScore(t, s); if (!v) { all = false; break; } sum += v; }
+    const best = Math.max(all ? sum / tokens.length : 0, tokens.length > 1 ? tokenScore(compact, s) : 0);
+    if (best) scored.push([best, s]);
+  }
+  if (scored.length) {
+    scored.sort((a, b) => b[0] - a[0]);
+    const top = scored[0][0];
+    // A real card-number hit hides weaker ones (2/62 hides 2/110; 144 hides 4/144).
+    if (top >= 85) return { mode: "exact", list: scored.filter(x => x[0] >= 85).map(x => x[1]) };
+    // Right number but no set of that size (2/26): offer those cards as the closest.
+    if (top === 70) return { mode: "closest", list: scored.filter(x => x[0] === 70).map(x => x[1]) };
+    return { mode: "exact", list: scored.map(x => x[1]) };
+  }
+  // Nothing matched: show the nearest card numbers (or names), allowing a couple of typos.
+  const [qa, qb] = compact.split("/");
+  const qn = normNum(qa || ""), qt = digitsOf(qb || "");
+  const near = slots.map(s => {
+    const c = s.card;
+    let d = Math.min(lev(qn, c._n), lev(qn, c._d));
+    if (qt) d += c._t === qt ? 0 : Math.min(lev(qt, c._t), 2) * 0.5;
+    if (!/\d/.test(qn)) d = Math.min(d, ...c._hay.split(/\s+/).map(w => lev(qn, w)));
+    return [d, s];
+  }).filter(([d]) => d <= Math.max(1, Math.floor(qn.length / 3)) + 1);
+  if (!near.length) return { mode: "none", list: [] };
+  const min = Math.min(...near.map(x => x[0]));
+  return { mode: "closest", list: near.filter(x => x[0] <= min + 0.5).sort((a, b) => a[0] - b[0]).map(x => x[1]) };
+}
+
+function sortSlots(list) {
+  const by = {
+    release: null,
+    newest: (a, b) => b.card.date.localeCompare(a.card.date),
+    number: (a, b) => { const x = NUM_SORT_KEY(a.card), y = NUM_SORT_KEY(b.card); return x[0] - y[0] || x[1].localeCompare(y[1]) || x[2] - y[2] || a.card.date.localeCompare(b.card.date); },
+    set: (a, b) => a.card.set.localeCompare(b.card.set),
+    name: (a, b) => a.card.name.localeCompare(b.card.name),
+    finish: (a, b) => ["holo", "reverse", "nonholo"].indexOf(a.kind) - ["holo", "reverse", "nonholo"].indexOf(b.kind),
+  }[sortBy];
+  return by ? list.slice().sort((a, b) => by(a, b) || SLOTS.indexOf(a) - SLOTS.indexOf(b)) : list;
+}
+
+let lastSearch = { mode: "off", list: null };
 function visibleSlots() {
-  return SLOTS.filter(s =>
+  const filtered = sortSlots(SLOTS.filter(s =>
     (filt.kind === "all" || s.kind === filt.kind) &&
-    (filt.status === "all" || (filt.status === "have") === owned.has(s.key)));
+    (filt.status === "all" || (filt.status === "have") === owned.has(s.key))));
+  if (!query.trim()) { lastSearch = { mode: "off", list: null }; return filtered; }
+  lastSearch = searchSlots(filtered, query);
+  return lastSearch.list;
 }
 function pageCount(list) { return Math.max(1, Math.ceil(list.length / PER_PAGE)); }
 function normP(n, list) {
@@ -318,13 +445,14 @@ function pageHTML(idx, list) {
   if (idx >= total) {
     grid = `<div class="blank-note">End of the binder.<br>New {{POKEMON}} printings will get a pocket here.</div>`;
   } else if (!items.length) {
-    grid = `<div class="blank-note">${filt.status === "have" ? "Nothing collected with this filter yet." : "Every card in this filter is collected."}</div>`;
+    grid = `<div class="blank-note">${query.trim() ? "No cards match your search." : filt.status === "have" ? "Nothing collected with this filter yet." : "Every card in this filter is collected."}</div>`;
   } else {
     grid = items.map(s => pocketHTML(s)).join("");
     for (let i = items.length; i < PER_PAGE; i++) grid += `<div class="pocket"><div class="sleeve" style="cursor:default"></div></div>`;
   }
   const label = idx < total ? `p. ${idx + 1}` : "";
-  const range = items.length ? `${items[0].card.date.slice(0, 4)}${items.at(-1).card.date.slice(0, 4) !== items[0].card.date.slice(0, 4) ? "–" + items.at(-1).card.date.slice(0, 4) : ""}` : "";
+  const years = items.map(s => s.card.date.slice(0, 4)).sort();
+  const range = years.length ? years[0] + (years.at(-1) !== years[0] ? "–" + years.at(-1) : "") : "";
   return `<div class="grid">${grid}</div><div class="foot"><span>${label}</span><span>${range}</span></div>`;
 }
 
@@ -349,6 +477,19 @@ function renderJump(list) {
   sel.disabled = !seen.size;
 }
 
+function renderSearchNote(list) {
+  const note = $("#search-note");
+  if (lastSearch.mode === "off") { note.hidden = true; return; }
+  const q = `<b>“${esc(query.trim())}”</b>`;
+  const cards = new Set(list.map(s => s.card.id)).size;
+  const count = `${cards} card${cards === 1 ? "" : "s"}, ${list.length} pocket${list.length === 1 ? "" : "s"}`;
+  note.innerHTML = (lastSearch.mode === "exact" ? `<span>${count} for ${q}</span>`
+    : lastSearch.mode === "closest" ? `<span>No exact match for ${q}. Showing the closest: ${count}.</span>`
+    : `<span>No cards match ${q}${filt.status !== "all" || filt.kind !== "all" ? " with the current filters" : ""}.</span>`)
+    + `<button type="button" id="q-clear">Clear search</button>`;
+  note.hidden = false;
+}
+
 function render() {
   if (animating) { pendingRender = true; return; }
   const list = visibleSlots();
@@ -361,6 +502,7 @@ function render() {
   $("#where").textContent = isSpread() && shownLast > p + 1 ? `Pages ${p + 1}–${shownLast} of ${total}` : `Page ${p + 1} of ${total}`;
   $("#prev").disabled = p === 0;
   $("#next").disabled = p + (isSpread() ? 2 : 1) >= total;
+  renderSearchNote(list);
   renderTally();
   renderJump(list);
   if ($("#detail").open) renderDetail();
@@ -504,6 +646,27 @@ document.querySelectorAll("[data-kind]").forEach(b => b.addEventListener("click"
   document.querySelectorAll("[data-kind]").forEach(x => x.setAttribute("aria-pressed", x === b));
   render();
 }));
+let searchTimer = null;
+$("#q").addEventListener("input", e => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { query = e.target.value; p = 0; jumpSet = null; render(); }, 150);
+});
+$("#q").addEventListener("keydown", e => {
+  if (e.key === "Escape") { e.target.value = ""; query = ""; p = 0; render(); }
+  if (e.key === "Enter") e.target.blur();      // closes the phone keyboard so the results are visible
+});
+$("#search-note").addEventListener("click", e => {
+  if (!e.target.closest("#q-clear")) return;
+  $("#q").value = ""; query = ""; p = 0; render(); $("#q").focus();
+});
+$("#sort").value = sortBy;
+if (!$("#sort").value) { sortBy = "release"; $("#sort").value = sortBy; }
+$("#sort").addEventListener("change", e => {
+  sortBy = e.target.value; p = 0; jumpSet = null;
+  try { localStorage.setItem(SORT_KEY, sortBy); } catch (err) {}
+  render();
+});
+
 $("#jump").addEventListener("change", e => {
   const i = +e.target.value;
   jumpSet = visibleSlots()[i]?.card.set || null;

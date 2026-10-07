@@ -7,6 +7,8 @@ What the binder does:
 - Nine-pocket pages: a two-page spread with a page-turn animation on wide screens and unfolded foldables, one page at a time on phones (swipe or arrow keys).
 - Finish badges on every pocket, and a foil shimmer on collected holos and reverse holos.
 - Filters for Missing / Collected and by finish, Jump to set, and a details view for each card with every finish it came in.
+- Search that takes card numbers however they're typed (`2/62`, `002 / 062`, `#2`, `swsh 51`, `SM-144`) plus set and card names, and shows the closest matches when nothing matches exactly.
+- Sort by release date, card number, set name, card name, or finish.
 - Cover and accent colors that follow the Pokémon's main TCG type (blue for Water, yellow for Lightning, and so on), in light and dark mode.
 - Works offline and catches up when the phone is back online.
 
